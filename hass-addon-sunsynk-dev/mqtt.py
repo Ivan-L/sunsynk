@@ -148,6 +148,19 @@ class NumberEntity(Entity):
         self.device_class = None
 
 
+@attr.define
+class SwitchEntity(Entity):
+    """A HomeAssistant Switch entity."""
+
+    command_topic: str = attr.field(default=None, validator=required)
+    payload_off: str = attr.field(default="OFF")
+    payload_on: str = attr.field(default="ON")
+
+    on_change: Callable = attr.field(default=None)
+
+    _path = "switch"
+
+
 class MQTTClient:
     """Basic MQTT Client."""
 

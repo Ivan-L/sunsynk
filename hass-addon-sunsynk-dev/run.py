@@ -12,12 +12,26 @@ from typing import Any, Callable, Dict, List, Sequence, Tuple
 
 import yaml
 from filter import RROBIN, Filter, getfilter, suggested_filter
-from mqtt import MQTT, Device, Entity, NumberEntity, SelectEntity, SensorEntity
+from mqtt import (
+    MQTT,
+    Device,
+    Entity,
+    NumberEntity,
+    SelectEntity,
+    SensorEntity,
+    SwitchEntity,
+)
 from options import OPT, SS_TOPIC
 from profiles import profile_add_entities, profile_poll
 
 from sunsynk.definitions import ALL_SENSORS, DEPRECATED, RATED_POWER
-from sunsynk.sensor import NumberRWSensor, SelectRWSensor, ensure_tuple, slug
+from sunsynk.sensor import (
+    NumberRWSensor,
+    SelectRWSensor,
+    SwitchRWSensor,
+    ensure_tuple,
+    slug,
+)
 from sunsynk.sunsynk import Sensor, Sunsynk
 
 _LOGGER = logging.getLogger(__name__)
@@ -101,6 +115,19 @@ async def hass_discover_sensors(serial: str, rated_power: float) -> None:
                     state_topic=state_topic,
                     command_topic=command_topic,
                     options=sensor.available_values(),
+                    unique_id=unique_id,
+                    device=dev,
+                    on_change=create_on_change_handler(filt, sensor.value_to_reg),
+                )
+            )
+
+        if isinstance(sensor, SwitchRWSensor):
+            ents.append(
+                SwitchEntity(
+                    name=entity_name,
+                    entity_category="config",
+                    state_topic=state_topic,
+                    command_topic=command_topic,
                     unique_id=unique_id,
                     device=dev,
                     on_change=create_on_change_handler(filt, sensor.value_to_reg),
@@ -328,10 +355,10 @@ async def main(loop: AbstractEventLoop) -> None:  # noqa
                 newv,
                 sensor.reg_value,
             )
-            sensor.reg_value = newv
-            await SUNSYNK.write_sensor(sensor)
-            await read_sensors([sensor], msg=sensor.name)
-            await publish_sensors([filt], force=True)
+            # sensor.reg_value = newv
+            # await SUNSYNK.write_sensor(sensor)
+            # await read_sensors([sensor], msg=sensor.name)
+            # await publish_sensors([filt], force=True)
 
     async def poll_sensors() -> None:
         """Poll sensors."""

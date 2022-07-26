@@ -168,6 +168,21 @@ class SelectRWSensor(RWSensor):
         )
 
 
+@attr.define(slots=True)
+class SwitchRWSensor(RWSensor):
+    """Sensor that has a value of either off or on."""
+
+    def value_to_reg(self, value: bool) -> int:
+        """Get the register value from a display value."""
+        return 1 if value else 0
+
+    def update_value(self) -> None:
+        """Update value from current register values."""
+        self.value = {0: False, 1: True}.get(
+            self.reg_value[0], f"Unknown {self.reg_value[0]}"
+        )
+
+
 def group_sensors(
     sensors: Sequence[Sensor], allow_gap: int = 3, max_group_size: int = 60
 ) -> Generator[list[int], None, None]:
