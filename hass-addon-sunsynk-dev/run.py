@@ -12,12 +12,12 @@ from typing import Any, Callable, Dict, List, Sequence, Tuple
 
 import yaml
 from filter import RROBIN, Filter, getfilter, suggested_filter
-from mqtt import MQTT, Device, Entity, NumberEntity, SensorEntity
+from mqtt import MQTT, Device, Entity, NumberEntity, SelectEntity, SensorEntity
 from options import OPT, SS_TOPIC
 from profiles import profile_add_entities, profile_poll
 
 from sunsynk.definitions import ALL_SENSORS, DEPRECATED, RATED_POWER
-from sunsynk.sensor import NumberRWSensor, ensure_tuple, slug
+from sunsynk.sensor import NumberRWSensor, SelectRWSensor, ensure_tuple, slug
 from sunsynk.sunsynk import Sensor, Sunsynk
 
 _LOGGER = logging.getLogger(__name__)
@@ -71,29 +71,48 @@ async def hass_discover_sensors(serial: str, rated_power: float) -> None:
     for filt in SENSORS:
         sensor = filt.sensor
 
+        entity_name = f"{OPT.sensor_prefix} {sensor.name}".strip()
+        state_topic = f"{SS_TOPIC}/{OPT.sunsynk_id}/{sensor.id}"
+        command_topic = f"{SS_TOPIC}/{OPT.sunsynk_id}/{sensor.id}_set"
+        unique_id = f"{OPT.sunsynk_id}_{sensor.id}"
+
         if isinstance(sensor, NumberRWSensor):
             ents.append(
                 NumberEntity(
-                    name=f"{OPT.sensor_prefix} {sensor.name}".strip(),
+                    name=entity_name,
                     entity_category="config",
-                    state_topic=f"{SS_TOPIC}/{OPT.sunsynk_id}/{sensor.id}",
-                    command_topic=f"{SS_TOPIC}/{OPT.sunsynk_id}/{sensor.id}_set",
+                    state_topic=state_topic,
+                    command_topic=command_topic,
                     min=float(sensor.min_value),
                     max=float(sensor.max_value),
                     unit_of_measurement=sensor.unit,
-                    unique_id=f"{OPT.sunsynk_id}_{sensor.id}",
+                    unique_id=unique_id,
                     device=dev,
                     on_change=create_on_change_handler(filt, int),
                 )
             )
             continue
 
+        if isinstance(sensor, SelectRWSensor):
+            ents.append(
+                SelectEntity(
+                    name=entity_name,
+                    entity_category="config",
+                    state_topic=state_topic,
+                    command_topic=command_topic,
+                    options=sensor.available_values(),
+                    unique_id=unique_id,
+                    device=dev,
+                    on_change=create_on_change_handler(filt, sensor.value_to_reg),
+                )
+            )
+
         ents.append(
             SensorEntity(
-                name=f"{OPT.sensor_prefix} {sensor.name}".strip(),
-                state_topic=f"{SS_TOPIC}/{OPT.sunsynk_id}/{sensor.id}",
+                name=entity_name,
+                state_topic=state_topic,
                 unit_of_measurement=sensor.unit,
-                unique_id=f"{OPT.sunsynk_id}_{sensor.id}",
+                unique_id=unique_id,
                 device=dev,
             )
         )

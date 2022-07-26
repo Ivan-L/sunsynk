@@ -12,6 +12,7 @@ from sunsynk.sensor import (
     MathSensor,
     NumberRWSensor,
     SDStatusSensor,
+    SelectRWSensor,
     Sensor,
     SerialSensor,
     TempSensor,
@@ -174,6 +175,20 @@ def test_numberrw() -> None:
     assert s.max_value == 0
     s.max.value = 30
     assert s.max_value == 30
+
+
+def test_selectrw() -> None:
+    s = SelectRWSensor(1, "", options={1: "one", 2: "two"})
+    s.reg_to_value(1)
+
+    assert s.value == "one"
+    assert s.available_values() == ["one", "two"]
+    assert s.value_to_reg("two") == 2
+
+    assert s.value_to_reg("five") == 1
+
+    s.reg_to_value(5)
+    assert s.value == "Unknown 5"
 
 
 def test_update_func() -> None:

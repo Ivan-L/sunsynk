@@ -142,6 +142,32 @@ class NumberRWSensor(RWSensor):
         return sensors
 
 
+@attr.define(slots=True)
+class SelectRWSensor(RWSensor):
+    """Sensor with a set of options to select from."""
+
+    options: Dict[int, str] = attr.field(default={})
+    __values_map: Dict[str, int] = {}
+
+    def __attrs_post_init__(self) -> None:
+        """Ensure correct parameters."""
+        self.__values_map = {v: k for k, v in self.options.items()}
+
+    def available_values(self) -> List[str]:
+        """Get the available values for this sensor."""
+        return list(self.options.values())
+
+    def value_to_reg(self, name: str) -> int:
+        """Get the register value from a display value."""
+        return self.__values_map.get(name, self.reg_value[0])
+
+    def update_value(self) -> None:
+        """Update value from current register values."""
+        self.value = (
+            self.options.get(self.reg_value[0]) or f"Unknown {self.reg_value[0]}"
+        )
+
+
 def group_sensors(
     sensors: Sequence[Sensor], allow_gap: int = 3, max_group_size: int = 60
 ) -> Generator[list[int], None, None]:
